@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Web Speech API</title>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<link rel="stylesheet" href="css/sample.css">
+</head>
+
+<body>
+<center><a class="button" onClick="record()" href="#">ここをクリックしてソフィアに話しかけてください（音声認識が起動します）</a></center>
+
+<div class="features-box">
+<img src="img/me.png">
+<textarea id="talkapi__input" cols="100" rows="10" placeholder="・・・">
+</textarea>
+</div>
+    
+<div class="features-box">
+<img src="img/sophia.png">
+<textarea id="talkapi__reply" class="text" cols="100" rows="10" placeholder="・・・">
+</textarea>
+</div>
+
+<div class="features-box">
+<img src="img/ojisan.png">
+    <label><input class="en" type="checkbox" checked/>English</label>
+<textarea id="talkapi__me" class="text" cols="100" rows="10" placeholder="・・・">
+</textarea>
+</div>
+
+<div class="features-box">
+<img src="img/ojisan.png">
+    <label><input class="en" type="checkbox" checked/>English</label>
+<textarea id="talkapi__man" class="text" cols="100" rows="10" placeholder="・・・">
+</textarea>
+</div>
+
+<div class="kaiwa">
+    ※：会話の履歴はページ下部に表示されます。
+</div>
+<br>
+<button id="clear" class="button">履歴を削除</button>
+
+<script>
+//履歴削除ボタンを非表示
+document.getElementById("clear").style.display ="none";
+        
+//画面再読み込みで表示
+window.onload = function() {
+    //音声合成
+//    speechSynthesis.speak(
+//    new SpeechSynthesisUtterance("画面上部のボタンを押して私に話しかけてください")
+//    );
+    
+    //履歴と削除ボタン表示
+    if(localStorage.getItem("chat")){
+     const reload = localStorage.getItem("chat");
+     var json_reload = JSON.parse(reload);
+     console.dir(json_reload);
+     for( i in json_reload){
+  $("body").append(
+      "<table><tr><td>私</td><td>ソフィア</td></tr>"
+    +"<tr><td>"+json_reload[i].sadaki+"</td><td>"+json_reload[i].sophia+"</td></tr>"
+    +"<tr><td>"+json_reload[i].ojisan0+"</td><td>"+json_reload[i].ojisan+"</td></tr>"
+    +"</table>");
+
+
+    var y1 = document.getElementById("clear");
+    y1.style.display="block";
+         
+  }
+ }
+}    
+
+//履歴削除
+$("#clear").on("click" ,function(){
+   localStorage.removeItem('chat');
+   (function(){
+　　$('table').remove();
+   var y2 = document.getElementById("clear");
+    y2.style.display="none";
+   })();
+   alert("会話を削除しました");
+});
+
+//音声認識API
+window.SpeechRecognition = window.SpeechRecognition || webkitSpeechRecognition;
+var recognition = new webkitSpeechRecognition();
+recognition.lang = 'ja';
+    
+// 録音終了時トリガー
+recognition.addEventListener('result', function(event){
+    var text = event.results.item(0).item(0).transcript;
+    $("#talkapi__input").val(text);
+    handler_request_reply()
+
+}, false);
+
+// 録音開始
+function record()
+{
+    recognition.start();
+}
+    
+    
+    
+//Talk API
+/*---------------------------------------*/
+/* HTML(だけ)の読み込みが完了したら */
+/*---------------------------------------*/
+window.addEventListener('DOMContentLoaded',()=>{
+    //- イベントリスナー登録
+    document.getElementById('talkapi__request').addEventListener('click',handler_request_reply);
+});
+
+/*---------------------------------------*/
+/* 返答をリクエスト */
+/*---------------------------------------*/
+function handler_request_reply(ev){
+    /*---------------------------------------*/
+    /* コメント取得 */
+    /*---------------------------------------*/
+    const comment = document.getElementById('talkapi__input').value;
+
+    /*---------------------------------------*/
+    /* レクエストデータ */
+    /*---------------------------------------*/
+    let formdata = new FormData();
+    //- apikeyパラメーター
+    formdata.append('apikey','AIvVPkkFFM9qP2OvyNMZKsG6Mf1h1JEU');
+    //- コメント
+    formdata.append('query',comment);
+
+    /*---------------------------------------*/
+    /* リクエスト */
+    /*---------------------------------------*/
+    fetch('https://api.a3rt.recruit-tech.co.jp/talk/v1/smalltalk',{
+        method: 'post',
+        body: formdata,
+    }).then(response => {
+        //- レスポンス取得
+        response.json().then(data => {
+            //- 返答取得
+            const reply = data.results[0].reply;
+            //- 出力
+            document.getElementById('talkapi__reply').innerHTML = reply;
+            speak()
+
+        });
+
+    });
+
+}
+
+//- inputに入力された値を取得
+const comment = document.getElementById('talkapi__input').value;
+
+//- FormDataクラスからインスタンスを生成
+let formdata = new FormData();
+//- apikeyパラメーターをセット
+formdata.append('apikey','AIvVPkkFFM9qP2OvyNMZKsG6Mf1h1JEU');
+//- queryパラメーターをセット
+formdata.append('query',comment);
+
+$.ajax({
+    method: 'post',
+    url: 'https://api.a3rt.recruit-tech.co.jp/talk/v1/smalltalk',
+    data: formdata,
+    processData: false,
+}).done(response => {
+    console.log(response);
+})
+    
+    
+// 翻訳API（me）
+function translateme() {
+
+    const now = new Date();
+    const nowtime = now.getTime();
+
+// 認証トークンを取得するための関数 [getToken] を定義
+// http://docs.microsofttranslator.com/oauth-token.html
+
+    const getToken = function() {
+      const defer = $.Deferred();
+
+// 現在時刻と、sessionStorageに保存されている時刻を比較
+// sessionStorageに保存されているトークンが8分以内に発行されたものであれば、そのまままトークンを返す
+// 8分以上経っている場合、もしくはトークンが存在しない場合、新規にトークンを取得。
+// 取得したトークン、および取得時間をUNIX Time に変換したデータをJSON [datalist] に格納
+// sessionStorage [tdata] にJSONを保存する
+
+      const arr = JSON.parse(sessionStorage.getItem("tdata"));
+
+      if (arr === null || arr.time + 1000 * 60 * 8 < nowtime) {
+        $.ajax({
+          url: 'https://api.cognitive.microsoft.com/sts/v1.0/issueToken',
+          type: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/jwt',
+            'Ocp-Apim-Subscription-Key': '31470ee5c4174cafb7f4d8dcb4fcdfa6',
+          },
+          async: false,
+        }).done(function(data) {
+
+          const datalist = {
+            time: nowtime,
+            token: data,
+          }
+          sessionStorage.setItem('tdata', JSON.stringify(datalist));
+        });
+      }
+
+// sessionStorage に保存されたデータを変数 arr2 に格納
+// JSONを文字列に変換後、トークンデータを引き出して翻訳用の関数にひきわたす
+
+      const arr2 = JSON.parse(sessionStorage.getItem("tdata"));
+      const token = arr2.token;
+      defer.resolve(token);
+      return defer.promise();
+    };
+
+// 関数 [getToken] 実行後、取得したトークンを 受け取る
+// フォームから入力したデータとともに、 Microsoft Translator テキストAPIへ送信
+
+
+    $.when(getToken()).done(function(token) {
+      const key = 'Bearer ' + token;
+      const text = $("#talkapi__input").val();
+      const response = $.ajax({
+          url: 'https://api.microsofttranslator.com/v2/http.svc/Translate',
+          type: 'GET',
+          data: {
+            'appid': key,
+            'Accept': 'application/xml',
+            'text': text,
+            'to': 'en',
+          },
+          async: false,
+        })
+
+// Translator テキスト APIを通じて取得したデータから、翻訳語が含まれるプロパティを取得
+// replace関数でタグを除去し、翻訳データのみを抽出して表示する
+
+      const data = response.responseText;
+      const translation = data.replace(/<("[^"]*"|'[^']*'|[^'">])*>/g, '');
+      $("#talkapi__me").text(translation);
+        speak1()
+    })
+  }
+    
+
+        
+// 翻訳API（sophia）
+function translate() {
+
+    const now = new Date();
+    const nowtime = now.getTime();
+
+// 認証トークンを取得するための関数 [getToken] を定義
+// http://docs.microsofttranslator.com/oauth-token.html
+
+    const getToken = function() {
+      const defer = $.Deferred();
+
+// 現在時刻と、sessionStorageに保存されている時刻を比較
+// sessionStorageに保存されているトークンが8分以内に発行されたものであれば、そのまままトークンを返す
+// 8分以上経っている場合、もしくはトークンが存在しない場合、新規にトークンを取得。
+// 取得したトークン、および取得時間をUNIX Time に変換したデータをJSON [datalist] に格納
+// sessionStorage [tdata] にJSONを保存する
+
+      const arr = JSON.parse(sessionStorage.getItem("tdata"));
+
+      if (arr === null || arr.time + 1000 * 60 * 8 < nowtime) {
+        $.ajax({
+          url: 'https://api.cognitive.microsoft.com/sts/v1.0/issueToken',
+          type: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/jwt',
+            'Ocp-Apim-Subscription-Key': '31470ee5c4174cafb7f4d8dcb4fcdfa6',
+          },
+          async: false,
+        }).done(function(data) {
+
+          const datalist = {
+            time: nowtime,
+            token: data,
+          }
+          sessionStorage.setItem('tdata', JSON.stringify(datalist));
+        });
+      }
+
+// sessionStorage に保存されたデータを変数 arr2 に格納
+// JSONを文字列に変換後、トークンデータを引き出して翻訳用の関数にひきわたす
+
+      const arr2 = JSON.parse(sessionStorage.getItem("tdata"));
+      const token = arr2.token;
+      defer.resolve(token);
+      return defer.promise();
+    };
+
+// 関数 [getToken] 実行後、取得したトークンを 受け取る
+// フォームから入力したデータとともに、 Microsoft Translator テキストAPIへ送信
+
+
+    $.when(getToken()).done(function(token) {
+      const key = 'Bearer ' + token;
+      const text = $("#talkapi__reply").val();
+      const response = $.ajax({
+          url: 'https://api.microsofttranslator.com/v2/http.svc/Translate',
+          type: 'GET',
+          data: {
+            'appid': key,
+            'Accept': 'application/xml',
+            'text': text,
+            'to': 'en',
+          },
+          async: false,
+        })
+
+// Translator テキスト APIを通じて取得したデータから、翻訳語が含まれるプロパティを取得
+// replace関数でタグを除去し、翻訳データのみを抽出して表示する
+
+      const data = response.responseText;
+      const translation = data.replace(/<("[^"]*"|'[^']*'|[^'">])*>/g, '');
+      $("#talkapi__man").text(translation);
+        speak2()
+        register()
+    })
+  }
+    
+
+
+    
+//音声合成API（TalkAPIの出力を音声合成）
+function speak(){
+  var text = document.getElementById('talkapi__reply').innerHTML;
+  var msg = new SpeechSynthesisUtterance(text);
+  msg.onend = translateme;
+  speechSynthesis.speak(msg);
+}
+
+//音声合成API（翻訳の出力を音声合成1）
+function speak1(){
+  var text = document.getElementById('talkapi__me').innerHTML;
+　var en = document.querySelector('.en').checked;
+  var uttr = new SpeechSynthesisUtterance();
+  uttr.text = text;
+  if(en){
+      uttr.lang = 'en-US';
+  }
+  speechSynthesis.speak(uttr);
+  translate()
+}
+    
+//音声合成API（翻訳の出力を音声合成1）
+function speak2(){
+  var text = document.getElementById('talkapi__man').innerHTML;
+　var en = document.querySelector('.en').checked;
+  var uttr = new SpeechSynthesisUtterance();
+  uttr.text = text;
+  if(en){
+      uttr.lang = 'en-US';
+  }
+  speechSynthesis.speak(uttr);
+}
+    
+  
+    
+//ローカルストレージへ登録
+function register(){
+var v = localStorage.getItem('chat');
+const value = $("#talkapi__reply").val();
+const value1 = $("#talkapi__input").val();
+const value3 = $("#talkapi__me").val();
+const value2 = $("#talkapi__man").val();
+console.log(v);
+if(v){
+    var ary = JSON.parse(v);
+    console.log(v);
+    ary.push({"sadaki": value1, "sophia": value, "ojisan0": value3, "ojisan": value2});
+    localStorage.setItem('chat', JSON.stringify(ary));
+} else{
+    localStorage.setItem('chat', JSON.stringify([{sadaki: value1, sophia: value, ojisan0: value3, ojisan: value2}]));
+    var get_text = localStorage.getItem('chat');
+    var json_ob = JSON.parse(get_text);
+}
+
+//画面に表示
+var get_text = localStorage.getItem('chat');
+var json_ob = JSON.parse(get_text);
+console.dir(json_ob);
+
+(function(){
+　　$('table').remove();
+})();
+
+for( i in json_ob){
+    $("body").append(
+    "<table><tr><td>私</td><td>ソフィア</td></tr>"
+    +"<tr><td>"+json_ob[i].sadaki+"</td><td>"+json_ob[i].sophia+"</td></tr>"
+    +"<tr><td>"+json_ob[i].ojisan0+"</td><td>"+json_ob[i].ojisan+"</td></tr>"
+    +"</table>");
+}
+    
+ 
+var y1 = document.getElementById("clear");
+    y1.style.display="block";
+}
+    
+</script>
+</body>
+</html>

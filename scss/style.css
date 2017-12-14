@@ -1,0 +1,51 @@
+
+body {
+  margin: 0; background: #000;
+}
+
+video {
+position: fixed;
+top: 50%;
+left: 50%;
+min-width: 100%;
+min-height: 100%;
+width: auto;
+height: auto;
+z-index: -100;
+-moz-transform: translateX(-50%) translateY(-50%);
+-ms-transform: translateX(-50%) translateY(-50%);
+-webkit-transform: translateX(-50%) translateY(-50%);
+transform: translateX(-50%) translateY(-50%);
+background: url('') no-repeat; background-size: cover;  -webkit-transition: 1s opacity; transition: 1s opacity; }
+
+
+
+
+.example {
+  position: relative;
+    padding: 1000px 200px 200px 200px;
+  }
+
+.example a {/*aタグを画像の真ん中に*/
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  -ms-transform: translate(-50%,-50%);
+  -webkit-transform: translate(-50%,-50%);
+  transform: translate(-50%,-50%);
+  /*以下装飾*/
+  margin:0;/*余計な隙間を除く*/
+  font-size: 50px;/*文字サイズ*/
+  border: solid white 2px; /*線で囲う*/
+  padding: 2px;/*文字と線の間の余白*/
+  color: white;/*文字色*/
+  text-decoration: none;/*下線を表示させない*/
+  }
+
+.example a:hover{/*カーソルを当てたとき*/
+  background: rgba(255, 255, 255, 0.3);/*背景を半透明に*/
+  }
+
+.example img {
+  width: 100%;
+  }
